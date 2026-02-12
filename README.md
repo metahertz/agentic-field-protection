@@ -219,6 +219,8 @@ podman machine stop
 | `OLLAMA_MODEL` | `llama3.2:3b` | Default model to download |
 | `OLLAMA_NUM_PARALLEL` | `1` | Concurrent request limit |
 | `OLLAMA_MAX_LOADED_MODELS` | `1` | Max models in memory |
+| `OLLAMA_MODEL_STORAGE` | `ollama-data` | Volume name or host path for model storage |
+| `OPENWEBUI_DATA_STORAGE` | `openwebui-data` | Volume name or host path for UI data |
 | `OPENWEBUI_PORT` | `8080` | Web interface port |
 | `WEBUI_AUTH` | `false` | Enable authentication |
 | `MCP_PORT` | `3000` | MCP server port |
@@ -301,9 +303,43 @@ All containers run on an isolated bridge network (`llm-network`):
 - MCP: Internal only, used by Open WebUI for MongoDB operations
 
 ### Data Persistence
-Volumes are created for persistent storage:
-- `ollama-data`: Model files and cache
-- `openwebui-data`: UI settings and chat history
+
+Named Podman volumes persist data across container restarts and rebuilds:
+- `ollama-data`: Model files and cache (~2-20GB depending on models)
+- `openwebui-data`: UI settings and chat history (~100MB)
+
+Models you download are stored in the `ollama-data` volume and survive `podman-compose down` / `podman-compose up` cycles. They are only removed if you explicitly delete the volume (e.g., `podman volume rm ollama-data` or `podman volume prune`).
+
+#### Using a bind mount instead
+
+To store models on a specific host directory (useful for sharing models between setups or easier backups), set `OLLAMA_MODEL_STORAGE` in `.env`:
+
+```bash
+# Use a host directory for model storage
+OLLAMA_MODEL_STORAGE=/path/to/my/ollama-models
+
+# Similarly for Open WebUI data
+OPENWEBUI_DATA_STORAGE=/path/to/my/webui-data
+```
+
+The directory will be created automatically on first start. Leave these unset to use the default named volumes.
+
+#### Volume management
+
+```bash
+# List volumes and sizes
+./scripts/manage-volumes.sh list
+
+# Backup volumes to tar archives
+./scripts/manage-volumes.sh backup              # saves to ./backups/
+./scripts/manage-volumes.sh backup /my/backups   # saves to custom dir
+
+# Restore from most recent backup
+./scripts/manage-volumes.sh restore
+
+# Remove all project volumes (prompts for confirmation)
+./scripts/manage-volumes.sh reset
+```
 
 ### GPU Acceleration
 Podman passes through the macOS GPU via `/dev/dri` device, using:

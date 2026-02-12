@@ -38,9 +38,9 @@ A complete containerized LLM system optimized for macOS M-series chips with:
 #### podman-compose.yml
 - Defines all three services
 - Sets up internal networking (llm-network)
-- Configures volumes for persistence:
-  - `ollama-data`: Model storage
-  - `openwebui-data`: UI settings and chat history
+- Configures persistent volumes (named volumes by default, configurable bind mounts):
+  - `ollama-data`: Model storage (override with `OLLAMA_MODEL_STORAGE`)
+  - `openwebui-data`: UI settings and chat history (override with `OPENWEBUI_DATA_STORAGE`)
 - GPU device passthrough (/dev/dri)
 - Service dependencies and health checks
 
@@ -199,6 +199,18 @@ MongoDB Atlas (cloud or local)
 Persistent data stored in Podman volumes:
 - **ollama-data**: ~2-20GB (model files)
 - **openwebui-data**: ~100MB (settings, history)
+
+Volumes are configurable via environment variables:
+- `OLLAMA_MODEL_STORAGE` — set to a host path for bind mount, or leave default for named volume
+- `OPENWEBUI_DATA_STORAGE` — same for Open WebUI data
+
+Volume operations are handled by `scripts/manage-volumes.sh`:
+```bash
+./scripts/manage-volumes.sh list      # Show volumes and sizes
+./scripts/manage-volumes.sh backup    # Export to tar archives
+./scripts/manage-volumes.sh restore   # Import from tar archives
+./scripts/manage-volumes.sh reset     # Remove all volumes (with confirmation)
+```
 
 Volumes survive container restarts but can be pruned:
 ```bash
