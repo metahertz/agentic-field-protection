@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=scripts/detect-runtime.sh
+source "$SCRIPT_DIR/detect-runtime.sh"
+
 # Usage: ./scripts/pull-model.sh [OPTIONS] [MODEL...]
 #
 # Pull one or more Ollama models. Models can be specified as positional
@@ -85,7 +90,7 @@ for MODEL_NAME in "${MODELS[@]}"; do
     echo "This may take several minutes..."
     echo ""
 
-    podman exec ollama ollama pull "$MODEL_NAME"
+    $CONTAINER_CMD exec ollama ollama pull "$MODEL_NAME"
 
     echo ""
     echo "Model $MODEL_NAME downloaded successfully!"

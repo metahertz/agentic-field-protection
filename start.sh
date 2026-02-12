@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Detect container runtime (podman or docker)
+# shellcheck source=scripts/detect-runtime.sh
+source "$SCRIPT_DIR/scripts/detect-runtime.sh"
+
 # --- Parse command-line arguments ---
 # Usage: ./start.sh [--model MODEL] [--no-pull]
 SKIP_PULL=false
@@ -41,7 +47,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "=========================================="
-echo "Starting LLM Container Stack"
+echo "Starting LLM Container Stack ($RUNTIME_NAME)"
 echo "=========================================="
 echo ""
 
@@ -119,7 +125,7 @@ if [[ "$MONGODB_URI" == *"username:password"* ]] || [ -z "$MONGODB_URI" ]; then
     exit 1
 fi
 
-# Ensure secrets file exists for podman-compose secrets support.
+# Ensure secrets file exists for compose secrets support.
 # If user provided URI via .env or env var (not a file), create the file.
 if [ ! -f "$SECRETS_FILE" ]; then
     mkdir -p "$(dirname "$SECRETS_FILE")"
@@ -127,25 +133,37 @@ if [ ! -f "$SECRETS_FILE" ]; then
     chmod 600 "$SECRETS_FILE"
 fi
 
-# Check if Podman is running
-if ! podman machine list | grep -q "Currently running"; then
-    echo "Starting Podman machine..."
-    podman machine start
-    sleep 5
+# Start container runtime if needed
+if [ "$CONTAINER_CMD" = "podman" ]; then
+    if ! podman machine list | grep -q "Currently running"; then
+        echo "Starting Podman machine..."
+        podman machine start
+        sleep 5
+    fi
+else
+    if ! docker info &>/dev/null; then
+        echo "Error: Docker is not running."
+        echo "Please start Docker Desktop or the Docker daemon."
+        exit 1
+    fi
+    echo "NOTE: Docker on macOS does not support GPU passthrough."
+    echo "Ollama will run in CPU-only mode (expect 10-15 tokens/sec)."
+    echo "For GPU acceleration, use Podman instead: brew install podman podman-compose"
+    echo ""
 fi
 
 echo "Building containers..."
 echo ""
 
 # Build containers
-podman-compose build
+$COMPOSE_CMD -f "$COMPOSE_FILE" build
 
 echo ""
 echo "Starting services..."
 echo ""
 
 # Start all services
-podman-compose up -d
+$COMPOSE_CMD -f "$COMPOSE_FILE" up -d
 
 echo ""
 echo "Waiting for services to be ready..."
@@ -155,7 +173,7 @@ sleep 10
 echo ""
 echo "Service Status:"
 echo "---------------"
-podman ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+$CONTAINER_CMD ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 echo ""
 echo "Checking Ollama health..."

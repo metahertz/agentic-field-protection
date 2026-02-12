@@ -12,6 +12,9 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# shellcheck source=scripts/detect-runtime.sh
+source "$SCRIPT_DIR/detect-runtime.sh"
+
 DRY_RUN=false
 JSON_OUTPUT=false
 
@@ -167,7 +170,7 @@ echo ""
 # Check GPU acceleration
 echo "Checking GPU acceleration..."
 echo ""
-GPU_INFO=$(podman exec ollama sh -c 'if command -v vulkaninfo >/dev/null 2>&1; then vulkaninfo | grep -A5 "GPU"; else echo "vulkaninfo not available"; fi' 2>&1 || echo "Could not check GPU info")
+GPU_INFO=$($CONTAINER_CMD exec ollama sh -c 'if command -v vulkaninfo >/dev/null 2>&1; then vulkaninfo | grep -A5 "GPU"; else echo "vulkaninfo not available"; fi' 2>&1 || echo "Could not check GPU info")
 echo "$GPU_INFO"
 echo ""
 
