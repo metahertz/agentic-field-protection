@@ -107,21 +107,62 @@ Ask questions about your MongoDB database:
 
 The MCP server will automatically execute MongoDB operations and return results.
 
-### Downloading Additional Models
+### Switching Models
+
+You can switch between LLM models at any time **without rebuilding containers**. Models are downloaded into a persistent volume and available immediately.
+
+#### At Startup
 
 ```bash
-# Download a specific model
-./scripts/pull-model.sh llama3.2:1b
+# Start with a specific model (overrides .env)
+./start.sh --model mistral:7b
 
-# Or use Ollama directly
-podman exec ollama ollama pull mistral:7b
+# Start without pulling any model (faster startup)
+./start.sh --no-pull
+
+# Or set the default in .env
+echo "OLLAMA_MODEL=phi3:3.8b" >> .env
+./start.sh
+
+# Or use an environment variable
+OLLAMA_MODEL=qwen2.5:3b ./start.sh
 ```
 
-Popular models for M-series Macs:
-- `llama3.2:1b` - Smallest, fastest (1.3GB)
-- `llama3.2:3b` - Recommended default (2GB)
-- `phi3:3.8b` - Microsoft's efficient model (2.3GB)
-- `qwen2.5:3b` - Excellent coding (2GB)
+#### After Services Are Running
+
+```bash
+# Download a new model (no restart needed)
+./scripts/pull-model.sh llama3.2:1b
+
+# Download multiple models at once
+./scripts/pull-model.sh mistral:7b phi3:3.8b qwen2.5:3b
+
+# List all downloaded models
+./scripts/pull-model.sh --list
+```
+
+After pulling a model, select it in the Open WebUI model dropdown — no restart required.
+
+#### Model Priority
+
+The model used at startup is resolved in this order:
+1. `--model` flag passed to `./start.sh`
+2. `MODEL` environment variable
+3. `OLLAMA_MODEL` in `.env`
+4. Default: `llama3.2:3b`
+
+#### Popular Models for M-series Macs
+
+| Model | Size | Best For | Speed (M2/M3) |
+|-------|------|----------|----------------|
+| `llama3.2:1b` | 1.3GB | Quick responses, low memory | 80-120 tok/s |
+| `llama3.2:3b` | 2GB | General use (recommended) | 50-80 tok/s |
+| `phi3:3.8b` | 2.3GB | Reasoning, instruction-following | 40-60 tok/s |
+| `qwen2.5:3b` | 2GB | Coding, multilingual | 50-80 tok/s |
+| `mistral:7b` | 4.1GB | Strong general-purpose | 20-40 tok/s |
+| `llama3.1:8b` | 4.7GB | High quality, needs 16GB RAM | 15-30 tok/s |
+
+Browse all available models at [ollama.com/library](https://ollama.com/library).
 
 ### Viewing Logs
 
