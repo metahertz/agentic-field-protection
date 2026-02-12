@@ -173,3 +173,45 @@ jobs:
             podman build -f "$f" -t "test-${name}" . || status=1
           done
           exit "$status"
+
+  security-scan:
+    name: Trivy container security scan
+    runs-on: ubuntu-latest
+    needs: [shellcheck, hadolint, validate-scripts]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get install -y wget apt-transport-https gnupg
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+      - name: Build and scan container images
+        run: |
+          for f in Containerfile.*; do
+            name="${f#Containerfile.}"
+            echo ""
+            echo "=========================================="
+            echo "Building $name"
+            echo "=========================================="
+            podman build -f "$f" -t "scan-${name}" .
+
+            echo ""
+            echo "=========================================="
+            echo "Scanning $name for vulnerabilities"
+            echo "=========================================="
+            # Save image as tar for Trivy to scan
+            podman save -o "/tmp/${name}.tar" "scan-${name}"
+            # exit-code 0: report findings but never fail CI
+            # This avoids blocking merges on upstream base image CVEs
+            trivy image --exit-code 0 --severity HIGH,CRITICAL --input "/tmp/${name}.tar"
+            rm -f "/tmp/${name}.tar"
+          done
