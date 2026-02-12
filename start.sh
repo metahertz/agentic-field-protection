@@ -1,6 +1,45 @@
 #!/bin/bash
 set -e
 
+# --- Parse command-line arguments ---
+# Usage: ./start.sh [--model MODEL] [--no-pull]
+SKIP_PULL=false
+CLI_MODEL=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --model)
+            CLI_MODEL="$2"
+            shift 2
+            ;;
+        --no-pull)
+            SKIP_PULL=true
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: ./start.sh [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --model MODEL  Specify the LLM model to pull on startup"
+            echo "                 (default: OLLAMA_MODEL from .env, or llama3.2:3b)"
+            echo "  --no-pull      Skip automatic model download on startup"
+            echo "  --help         Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  ./start.sh                           # Start with default model"
+            echo "  ./start.sh --model mistral:7b        # Start with Mistral 7B"
+            echo "  ./start.sh --no-pull                 # Start without pulling a model"
+            echo "  OLLAMA_MODEL=phi3:3.8b ./start.sh    # Use env var"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Run './start.sh --help' for usage."
+            exit 1
+            ;;
+    esac
+done
+
 echo "=========================================="
 echo "Starting LLM Container Stack"
 echo "=========================================="
@@ -140,13 +179,22 @@ echo "Services Started Successfully!"
 echo "=========================================="
 echo ""
 echo "Access Open WebUI at: http://localhost:${OPENWEBUI_PORT:-8080}"
-echo ""
-echo "Downloading initial model (${OLLAMA_MODEL:-llama3.2:3b})..."
-echo "This may take several minutes depending on your connection..."
-echo ""
+# Determine which model to use: CLI flag > env var > .env default > hardcoded default
+SELECTED_MODEL="${CLI_MODEL:-${OLLAMA_MODEL:-llama3.2:3b}}"
 
-# Pull the default model
-./scripts/pull-model.sh "${OLLAMA_MODEL:-llama3.2:3b}"
+if [ "$SKIP_PULL" = true ]; then
+    echo ""
+    echo "Skipping model download (--no-pull specified)."
+    echo "Pull a model later with: ./scripts/pull-model.sh $SELECTED_MODEL"
+else
+    echo ""
+    echo "Downloading model ($SELECTED_MODEL)..."
+    echo "This may take several minutes depending on your connection..."
+    echo ""
+
+    # Pull the selected model
+    ./scripts/pull-model.sh "$SELECTED_MODEL"
+fi
 
 echo ""
 echo "=========================================="
@@ -162,5 +210,10 @@ echo "Useful commands:"
 echo "  ./scripts/logs.sh [service]  - View logs"
 echo "  ./scripts/stop.sh            - Stop all services"
 echo "  ./scripts/pull-model.sh      - Download additional models"
+echo "  ./scripts/pull-model.sh --list - List downloaded models"
 echo "  ./scripts/benchmark.sh       - Run performance tests"
+echo ""
+echo "To switch models without restarting:"
+echo "  ./scripts/pull-model.sh <model-name>"
+echo "  Then select the new model in Open WebUI"
 echo ""
