@@ -1,6 +1,9 @@
 # Environment configuration
 .env
 
+# Secrets files
+secrets/
+
 # Podman/Docker volumes
 volumes/
 

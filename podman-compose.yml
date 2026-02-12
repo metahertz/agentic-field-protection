@@ -55,6 +55,8 @@ services:
       - MONGODB_URI=${MONGODB_URI}
       - MCP_LOG_LEVEL=${MCP_LOG_LEVEL:-info}
       - NODE_ENV=production
+    secrets:
+      - mongodb_uri
     restart: unless-stopped
     networks:
       - llm-network
@@ -64,6 +66,10 @@ volumes:
     driver: local
   openwebui-data:
     driver: local
+
+secrets:
+  mongodb_uri:
+    file: ${MONGODB_URI_FILE:-secrets/mongodb_uri}
 
 networks:
   llm-network:

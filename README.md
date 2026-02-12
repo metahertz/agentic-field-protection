@@ -51,14 +51,23 @@ chmod +x podman-setup.sh
 # Copy environment template
 cp .env.template .env
 
-# Edit .env and add your MongoDB connection string
+# Edit .env for non-secret configuration (ports, model, etc.)
 nano .env
 ```
 
-**Important:** Replace the `MONGODB_URI` value with your actual MongoDB Atlas connection string:
+**MongoDB Credentials** — choose one method:
+
 ```bash
-MONGODB_URI=mongodb+srv://your-username:your-password@your-cluster.mongodb.net/your-database
+# Option A (recommended): Use a secrets file
+mkdir -p secrets
+echo 'mongodb+srv://your-username:your-password@your-cluster.mongodb.net/your-database' > secrets/mongodb_uri
+chmod 600 secrets/mongodb_uri
+
+# Option B: Set MONGODB_URI directly in .env
+# MONGODB_URI=mongodb+srv://your-username:your-password@your-cluster.mongodb.net/your-database
 ```
+
+See [Secrets Management](Documentation/SECRETS.md) for more options including GitHub Actions secrets and external secrets managers.
 
 ### 3. Start Services
 
@@ -263,7 +272,8 @@ Podman passes through the macOS GPU via `/dev/dri` device, using:
 4. **MESA drivers** - Patched for macOS compatibility
 
 ### Security
-- MongoDB URI passed via environment variable (never committed)
+- MongoDB URI supports file-based secrets (`secrets/mongodb_uri`) — see [Secrets Management](Documentation/SECRETS.md)
+- Startup script warns if `.env` contains real credentials
 - Internal network isolation (only Open WebUI exposed)
 - No authentication required by default (local use only)
 - Consider enabling `WEBUI_AUTH=true` for multi-user setups
