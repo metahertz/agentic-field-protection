@@ -4,6 +4,7 @@
 FROM fedora:40
 
 # Install required packages for Vulkan/GPU support
+# hadolint ignore=DL3041
 RUN dnf install -y \
     curl \
     mesa-vulkan-drivers \
@@ -14,6 +15,7 @@ RUN dnf install -y \
     && dnf clean all
 
 # Install Ollama
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl -fsSL https://ollama.com/install.sh | sh
 
 # Create necessary directories

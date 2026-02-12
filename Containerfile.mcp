@@ -2,16 +2,16 @@
 FROM node:22-alpine
 
 # Install necessary build tools
+# hadolint ignore=DL3018
 RUN apk add --no-cache python3 make g++
 
 # Create app directory
 WORKDIR /app
 
-# Install MongoDB MCP server
-RUN npm install -g @mongodb-js/mongodb-mcp-server
-
-# Create config directory
-RUN mkdir -p /app/config
+# Install MongoDB MCP server and create config directory
+# hadolint ignore=DL3016
+RUN npm install -g @mongodb-js/mongodb-mcp-server \
+    && mkdir -p /app/config
 
 # Expose MCP port
 EXPOSE 3000
