@@ -127,6 +127,28 @@ jobs:
             exit 1
           fi
 
+  benchmark:
+    name: Benchmark regression check
+    runs-on: ubuntu-latest
+    needs: [shellcheck]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq bc
+
+      - name: Run benchmark dry-run validation
+        run: bash scripts/benchmark.sh --dry-run
+
+      - name: Validate baseline config
+        run: bash scripts/check-benchmarks.sh --validate-baselines
+
+      - name: Generate sample results and check for regressions
+        run: |
+          bash scripts/benchmark.sh --dry-run --json > /tmp/benchmark-results.json
+          cat /tmp/benchmark-results.json
+          bash scripts/check-benchmarks.sh /tmp/benchmark-results.json
+
   test:
     name: Run tests
     runs-on: ubuntu-latest
