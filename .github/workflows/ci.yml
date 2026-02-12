@@ -58,6 +58,30 @@ jobs:
           done
           exit "$status"
 
+  security-scan:
+    name: Security scan (${{ matrix.container }})
+    runs-on: ubuntu-latest
+    needs: [shellcheck, hadolint]
+    strategy:
+      fail-fast: false
+      matrix:
+        container: [ollama, mcp, openwebui]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build container image
+        run: |
+          docker build -f "Containerfile.${{ matrix.container }}" \
+            -t "scan-${{ matrix.container }}:latest" .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: "scan-${{ matrix.container }}:latest"
+          format: 'table'
+          exit-code: '1'
+          severity: 'HIGH,CRITICAL'
+
   test:
     name: Run tests
     runs-on: ubuntu-latest
