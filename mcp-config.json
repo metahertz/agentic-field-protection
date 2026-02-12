@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "mongodb": {
+      "command": "mongodb-mcp-server",
+      "args": [],
+      "env": {
+        "MONGODB_URI": "${MONGODB_URI}"
+      },
+      "capabilities": {
+        "tools": true,
+        "resources": true
+      }
+    }
+  },
+  "tools": {
+    "enabled": [
+      "mongodb.find",
+      "mongodb.aggregate",
+      "mongodb.insertOne",
+      "mongodb.updateOne",
+      "mongodb.deleteOne",
+      "mongodb.listDatabases",
+      "mongodb.listCollections",
+      "mongodb.createIndex",
+      "mongodb.vectorSearch"
+    ]
+  },
+  "logging": {
+    "level": "info",
+    "format": "json"
+  }
+}

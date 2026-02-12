@@ -1,0 +1,29 @@
+# Environment configuration
+.env
+
+# Podman/Docker volumes
+volumes/
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Node modules (if MCP server developed locally)
+node_modules/
+
+# Python cache (if using Python tools)
+__pycache__/
+*.pyc
+*.pyo

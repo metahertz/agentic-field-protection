@@ -1,0 +1,37 @@
+# Ollama with GPU acceleration for macOS via Vulkan-to-Metal
+# Requires Podman Machine with libkrun provider and virtio-gpu Venus
+
+FROM fedora:40
+
+# Install required packages for Vulkan/GPU support
+# hadolint ignore=DL3041
+RUN dnf install -y \
+    curl \
+    mesa-vulkan-drivers \
+    mesa-dri-drivers \
+    vulkan-loader \
+    vulkan-tools \
+    libdrm \
+    && dnf clean all
+
+# Install Ollama
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN curl -fsSL https://ollama.com/install.sh | sh
+
+# Create necessary directories
+RUN mkdir -p /root/.ollama
+
+# Set environment variables for Vulkan
+ENV MESA_LOADER_DRIVER_OVERRIDE=venus
+ENV VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+ENV OLLAMA_HOST=0.0.0.0:11434
+
+# Expose Ollama API port
+EXPOSE 11434
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:11434/api/tags || exit 1
+
+# Start Ollama server
+CMD ["ollama", "serve"]
