@@ -10,7 +10,7 @@ Containerized local LLM setup with GPU acceleration and MongoDB MCP integration.
 - [x] MongoDB MCP Server container
 - [x] Startup / shutdown scripts
 - [x] Integration test suite
-- [ ] CI pipeline (lint, test, container build validation)
+- [x] CI pipeline (lint, test, container build validation)
 
 ## P1 — Hardening
 
