@@ -22,7 +22,7 @@ Containerized local LLM setup with GPU acceleration and MongoDB MCP integration.
 ## P2 — Extensions
 
 - [x] Multi-model support (switch models without rebuild)
-- [ ] Persistent volume configuration for model cache
+- [x] Persistent volume configuration for model cache
 - [ ] ARM64 Linux support (beyond macOS)
 - [ ] Docker fallback for non-Podman environments
 
