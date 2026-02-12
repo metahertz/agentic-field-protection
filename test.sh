@@ -13,15 +13,33 @@ echo ""
 
 FAILED=0
 
+# Detect platform
+OS="$(uname -s)"
+case "$OS" in
+    Darwin) PLATFORM="macos" ;;
+    Linux)  PLATFORM="linux" ;;
+    *)      PLATFORM="unknown" ;;
+esac
+
 # Test 1: Check container runtime is running
 echo "[1/7] Checking $RUNTIME_NAME..."
 if [ "$CONTAINER_CMD" = "podman" ]; then
-    if podman machine list | grep -q "Currently running"; then
-        echo "✓ Podman machine is running"
-    else
-        echo "✗ Podman machine is not running"
-        echo "  Run: ./podman-setup.sh"
-        FAILED=$((FAILED + 1))
+    if [ "$PLATFORM" = "macos" ]; then
+        if podman machine list | grep -q "Currently running"; then
+            echo "✓ Podman machine is running"
+        else
+            echo "✗ Podman machine is not running"
+            echo "  Run: ./podman-setup.sh"
+            FAILED=$((FAILED + 1))
+        fi
+    elif [ "$PLATFORM" = "linux" ]; then
+        if podman info &> /dev/null; then
+            echo "✓ Podman is available (native Linux)"
+        else
+            echo "✗ Podman is not working"
+            echo "  Run: ./podman-setup.sh"
+            FAILED=$((FAILED + 1))
+        fi
     fi
 else
     if docker info &>/dev/null; then

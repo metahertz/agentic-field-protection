@@ -23,7 +23,7 @@ Containerized local LLM setup with GPU acceleration and MongoDB MCP integration.
 
 - [x] Multi-model support (switch models without rebuild)
 - [x] Persistent volume configuration for model cache
-- [ ] ARM64 Linux support (beyond macOS)
+- [x] ARM64 Linux support (beyond macOS)
 - [x] Docker fallback for non-Podman environments
 
 ## Out of Scope

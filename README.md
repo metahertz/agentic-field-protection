@@ -1,34 +1,55 @@
 # LLM Container with MongoDB MCP
 
-A fully containerized local LLM setup optimized for Mac M-series chips, featuring:
-- **Ollama** - LLM runtime with GPU acceleration via Vulkan-to-Metal
+A fully containerized local LLM setup with GPU acceleration, featuring:
+- **Ollama** - LLM runtime with GPU acceleration (Vulkan)
 - **Open WebUI** - Modern web interface for LLM interaction
 - **MongoDB MCP Server** - Model Context Protocol integration for MongoDB Atlas
 
+Supports **macOS Apple Silicon** (Vulkan-to-Metal) and **ARM64 Linux** (native Vulkan).
+
 ## Architecture
 
-This setup uses **Podman with GPU acceleration** through virtio-gpu Venus, providing ~3x better performance than CPU-only Docker containers while maintaining full containerization.
+This setup uses **Podman with GPU acceleration** to provide ~3x better performance than CPU-only Docker containers while maintaining full containerization.
 
-### Performance Profile (M2/M3 Mac, Llama 3.2 3B)
-- **Native Metal:** 80-100 tokens/sec
-- **Podman GPU:** 50-70 tokens/sec (this setup)
-- **Docker CPU:** 10-15 tokens/sec
+- **macOS:** GPU via virtio-gpu Venus (Vulkan-to-Metal translation through Podman Machine)
+- **ARM64 Linux:** GPU via native Vulkan drivers (Podman runs natively, no VM)
 
-The 40% performance penalty compared to native execution is worth the benefits of containerization: easy deployment, isolation, and reproducibility.
+### Performance Profile (Llama 3.2 3B)
+
+| Platform | GPU Mode | CPU-only |
+|----------|----------|----------|
+| macOS M2/M3 (native Metal) | 80-100 t/s | — |
+| macOS M2/M3 (Podman GPU) | 50-70 t/s | 10-15 t/s |
+| ARM64 Linux (native Vulkan) | 60-100+ t/s | 10-15 t/s |
+
+Performance varies by GPU hardware and driver maturity.
 
 ## Prerequisites
 
 ### Required
-- macOS with Apple Silicon (M1/M2/M3)
+- **macOS** with Apple Silicon (M1/M2/M3), **or** **ARM64 Linux** with Vulkan-capable GPU
 - **Podman** (recommended) or **Docker** — see below
 - 8GB+ RAM available for containers
 - 20GB+ free disk space
 
 ### Container Runtime
 
-**Podman (recommended)** — GPU acceleration via Vulkan-to-Metal:
+**Podman (recommended)** — GPU acceleration via Vulkan-to-Metal (macOS) or native Vulkan (Linux):
+
+**macOS:**
 ```bash
 brew install podman podman-compose
+```
+
+**Fedora/RHEL (ARM64):**
+```bash
+sudo dnf install podman podman-compose mesa-vulkan-drivers
+```
+
+**Ubuntu/Debian (ARM64):**
+```bash
+sudo apt install podman mesa-vulkan-drivers
+pip install podman-compose
 ```
 
 **Docker (alternative)** — CPU-only on macOS, but works everywhere:
@@ -286,8 +307,10 @@ sudo systemctl start docker
 GPU acceleration requires Podman (not Docker) on macOS. If not working:
 1. Verify you ran `./podman-setup.sh`
 2. Check Podman version: `podman --version` (need 4.0+)
-3. Fallback: System will use CPU (slower but functional)
-4. If using Docker: GPU is not available on macOS — this is expected
+3. On Linux, check GPU driver: `vulkaninfo --summary`
+4. On Linux, check group membership: `groups` (need `render` or `video`)
+5. Fallback: System will use CPU (slower but functional)
+6. If using Docker: GPU is not available on macOS — this is expected
 
 ### Slow Performance
 Expected performance varies by model size:
@@ -371,11 +394,19 @@ The directory will be created automatically on first start. Leave these unset to
 ```
 
 ### GPU Acceleration
-Podman passes through the macOS GPU via `/dev/dri` device, using:
+
+**macOS (Apple Silicon):**
+Podman passes through the GPU via `/dev/dri` device in a VM:
 1. **libkrun** - Lightweight VM provider
 2. **virtio-gpu Venus** - Vulkan virtualization
 3. **MoltenVK** - Vulkan-to-Metal translation
 4. **MESA drivers** - Patched for macOS compatibility
+
+**ARM64 Linux:**
+Podman runs natively and passes `/dev/dri` directly to the container:
+1. **Native Vulkan drivers** - Freedreno (Qualcomm), Panfrost (Mali), V3D (Broadcom), etc.
+2. **MESA drivers** - Standard Linux GPU stack
+3. No VM overhead — direct hardware access
 
 ### Security
 - MongoDB URI supports file-based secrets (`secrets/mongodb_uri`) — see [Secrets Management](Documentation/SECRETS.md)

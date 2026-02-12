@@ -51,6 +51,14 @@ echo "Starting LLM Container Stack ($RUNTIME_NAME)"
 echo "=========================================="
 echo ""
 
+# --- Platform detection ---
+OS="$(uname -s)"
+case "$OS" in
+    Darwin) PLATFORM="macos" ;;
+    Linux)  PLATFORM="linux" ;;
+    *)      PLATFORM="unknown" ;;
+esac
+
 # --- Secrets loading ---
 # Priority: secrets file > environment variable > .env file
 # Use MONGODB_URI_FILE to point to a file containing the URI,
@@ -133,12 +141,29 @@ if [ ! -f "$SECRETS_FILE" ]; then
     chmod 600 "$SECRETS_FILE"
 fi
 
+# Configure GPU driver for the platform
+if [ "$PLATFORM" = "macos" ]; then
+    # macOS uses Venus driver (Vulkan-to-Metal via virtio-gpu in Podman Machine)
+    export MESA_LOADER_DRIVER_OVERRIDE=venus
+else
+    # Linux uses native Vulkan drivers — no override needed
+    export MESA_LOADER_DRIVER_OVERRIDE=""
+fi
+
 # Start container runtime if needed
 if [ "$CONTAINER_CMD" = "podman" ]; then
-    if ! podman machine list | grep -q "Currently running"; then
-        echo "Starting Podman machine..."
-        podman machine start
-        sleep 5
+    if [ "$PLATFORM" = "macos" ]; then
+        if ! podman machine list | grep -q "Currently running"; then
+            echo "Starting Podman machine..."
+            podman machine start
+            sleep 5
+        fi
+    elif [ "$PLATFORM" = "linux" ]; then
+        if ! podman info &> /dev/null; then
+            echo "Error: Podman is not working. Check your installation."
+            echo "  Try: podman info"
+            exit 1
+        fi
     fi
 else
     if ! docker info &>/dev/null; then

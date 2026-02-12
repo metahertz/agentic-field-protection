@@ -9,7 +9,15 @@ Get up and running in 5 minutes.
 podman --version
 
 # If not installed:
+# macOS:
 brew install podman podman-compose
+
+# Fedora/RHEL (ARM64 Linux):
+sudo dnf install podman podman-compose mesa-vulkan-drivers
+
+# Ubuntu/Debian (ARM64 Linux):
+sudo apt install podman mesa-vulkan-drivers
+pip install podman-compose
 ```
 
 ## Installation
