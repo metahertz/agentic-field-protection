@@ -20,14 +20,24 @@ The 40% performance penalty compared to native execution is worth the benefits o
 
 ### Required
 - macOS with Apple Silicon (M1/M2/M3)
-- [Podman](https://podman.io/getting-started/installation) 4.0+
+- **Podman** (recommended) or **Docker** — see below
 - 8GB+ RAM available for containers
 - 20GB+ free disk space
 
-### Installation
+### Container Runtime
+
+**Podman (recommended)** — GPU acceleration via Vulkan-to-Metal:
 ```bash
 brew install podman podman-compose
 ```
+
+**Docker (alternative)** — CPU-only on macOS, but works everywhere:
+```bash
+# Install Docker Desktop from https://docs.docker.com/get-docker/
+# Or on Linux: sudo apt install docker.io docker-compose-v2
+```
+
+The startup script auto-detects which runtime is available. To force a specific runtime, set `CONTAINER_RUNTIME=podman` or `CONTAINER_RUNTIME=docker` before running scripts.
 
 ### MongoDB Atlas Account
 You'll need a MongoDB Atlas connection string. Sign up for free at [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas).
@@ -40,9 +50,11 @@ You'll need a MongoDB Atlas connection string. Sign up for free at [mongodb.com/
 # Clone or download this repository
 cd llm-container-mongodb-mcp
 
-# Set up Podman machine with GPU support
+# If using Podman: set up Podman machine with GPU support
 chmod +x podman-setup.sh
 ./podman-setup.sh
+
+# If using Docker: just ensure Docker Desktop is running
 ```
 
 ### 2. Configure Environment
@@ -126,6 +138,10 @@ echo "OLLAMA_MODEL=phi3:3.8b" >> .env
 
 # Or use an environment variable
 OLLAMA_MODEL=qwen2.5:3b ./start.sh
+
+# Or use the container runtime directly
+podman exec ollama ollama pull mistral:7b   # Podman
+docker exec ollama ollama pull mistral:7b   # Docker
 ```
 
 #### After Services Are Running
@@ -193,7 +209,7 @@ This will test inference speed and compare against expected performance.
 ```
 
 Tests include:
-- Podman machine status
+- Container runtime status (Podman or Docker)
 - Container health
 - GPU acceleration
 - API connectivity
@@ -225,6 +241,7 @@ podman machine stop
 | `WEBUI_AUTH` | `false` | Enable authentication |
 | `MCP_PORT` | `3000` | MCP server port |
 | `MCP_LOG_LEVEL` | `info` | Logging verbosity |
+| `CONTAINER_RUNTIME` | (auto-detect) | Force `podman` or `docker` |
 
 ### MongoDB MCP Configuration (mcp-config.json)
 
@@ -243,11 +260,17 @@ Edit `mcp-config.json` to enable/disable specific tools.
 
 ## Troubleshooting
 
-### "Podman machine is not running"
+### "Podman machine is not running" (Podman only)
 ```bash
 podman machine start
 # or
 ./podman-setup.sh
+```
+
+### "Docker is not running" (Docker only)
+Start Docker Desktop, or on Linux:
+```bash
+sudo systemctl start docker
 ```
 
 ### "Ollama API is not responding"
@@ -260,10 +283,11 @@ podman machine start
 ```
 
 ### "GPU device not detected"
-GPU acceleration requires specific Podman setup. If not working:
+GPU acceleration requires Podman (not Docker) on macOS. If not working:
 1. Verify you ran `./podman-setup.sh`
 2. Check Podman version: `podman --version` (need 4.0+)
 3. Fallback: System will use CPU (slower but functional)
+4. If using Docker: GPU is not available on macOS — this is expected
 
 ### Slow Performance
 Expected performance varies by model size:
@@ -276,7 +300,7 @@ If much slower:
 # Run benchmark to diagnose
 ./scripts/benchmark.sh
 
-# Check GPU status
+# Check GPU status (Podman only — Docker does not have GPU on macOS)
 podman exec ollama ls -la /dev/dri
 ```
 
@@ -288,9 +312,14 @@ podman exec ollama ls -la /dev/dri
 
 ### Container Build Failures
 ```bash
-# Clean up and rebuild
+# Clean up and rebuild (Podman)
 ./scripts/stop.sh
 podman system prune -af
+./start.sh
+
+# Clean up and rebuild (Docker)
+./scripts/stop.sh
+docker system prune -af
 ./start.sh
 ```
 
@@ -377,14 +406,15 @@ services:
 3. Remove Ollama container, keep Open WebUI + MCP
 
 ### Docker Mode (Maximum Compatibility)
-If Podman issues arise, convert to Docker:
+Docker is supported as a fallback when Podman is not available. All scripts auto-detect the runtime, so no manual conversion is needed.
 
-1. Install Docker Desktop for Mac
-2. Rename `podman-compose.yml` to `docker-compose.yml`
-3. Replace `podman` commands with `docker` in scripts
-4. Remove GPU device mapping (Docker doesn't support it on macOS)
+1. Install [Docker Desktop](https://docs.docker.com/get-docker/) (macOS/Windows) or Docker Engine (Linux)
+2. Ensure Docker is running
+3. Run `./start.sh` — it will automatically use `docker-compose.yml`
 
-Expect 5-6x slower performance (CPU-only).
+**GPU tradeoff on macOS:** Docker Desktop on macOS runs containers in a Linux VM without access to the Apple GPU. Ollama will run in CPU-only mode, resulting in ~5-6x slower inference (10-15 tokens/sec for llama3.2:3b vs 50-70 with Podman GPU). For GPU-accelerated containers on macOS, use Podman instead.
+
+**Docker on Linux with NVIDIA GPU:** If you have an NVIDIA GPU on Linux, you can add GPU support by installing the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) and adding a `deploy` section to `docker-compose.yml`. This is not included by default since the project targets macOS Apple Silicon.
 
 ## Resources
 

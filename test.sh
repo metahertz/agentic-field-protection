@@ -1,27 +1,42 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=scripts/detect-runtime.sh
+source "$SCRIPT_DIR/scripts/detect-runtime.sh"
+
 echo "=========================================="
-echo "LLM Container Stack - Integration Tests"
+echo "LLM Container Stack - Integration Tests ($RUNTIME_NAME)"
 echo "=========================================="
 echo ""
 
 FAILED=0
 
-# Test 1: Check Podman is running
-echo "[1/7] Checking Podman machine..."
-if podman machine list | grep -q "Currently running"; then
-    echo "✓ Podman machine is running"
+# Test 1: Check container runtime is running
+echo "[1/7] Checking $RUNTIME_NAME..."
+if [ "$CONTAINER_CMD" = "podman" ]; then
+    if podman machine list | grep -q "Currently running"; then
+        echo "✓ Podman machine is running"
+    else
+        echo "✗ Podman machine is not running"
+        echo "  Run: ./podman-setup.sh"
+        FAILED=$((FAILED + 1))
+    fi
 else
-    echo "✗ Podman machine is not running"
-    echo "  Run: ./podman-setup.sh"
-    FAILED=$((FAILED + 1))
+    if docker info &>/dev/null; then
+        echo "✓ Docker daemon is running"
+    else
+        echo "✗ Docker daemon is not running"
+        echo "  Start Docker Desktop or the Docker daemon"
+        FAILED=$((FAILED + 1))
+    fi
 fi
 echo ""
 
 # Test 2: Check containers are running
 echo "[2/7] Checking containers..."
-CONTAINERS=$(podman ps --format "{{.Names}}")
+CONTAINERS=$($CONTAINER_CMD ps --format "{{.Names}}")
 for service in ollama openwebui mcp-mongodb; do
     if echo "$CONTAINERS" | grep -q "$service"; then
         echo "✓ $service is running"
@@ -34,10 +49,14 @@ echo ""
 
 # Test 3: Test GPU acceleration
 echo "[3/7] Testing GPU acceleration..."
-if podman exec ollama ls /dev/dri 2>/dev/null | grep -q "renderD128"; then
-    echo "✓ GPU device detected in Ollama container"
+if [ "$RUNTIME_HAS_GPU" = "true" ]; then
+    if $CONTAINER_CMD exec ollama ls /dev/dri 2>/dev/null | grep -q "renderD128"; then
+        echo "✓ GPU device detected in Ollama container"
+    else
+        echo "⚠ GPU device not found - may be using CPU only"
+    fi
 else
-    echo "⚠ GPU device not found - may be using CPU only"
+    echo "⚠ GPU not available with Docker on macOS - using CPU only"
 fi
 echo ""
 
@@ -70,7 +89,7 @@ echo ""
 # Test 6: Test MCP Server
 echo "[6/7] Testing MongoDB MCP server..."
 MCP_PORT=${MCP_PORT:-3000}
-if podman exec mcp-mongodb node -e "console.log('ok')" 2>/dev/null | grep -q "ok"; then
+if $CONTAINER_CMD exec mcp-mongodb node -e "console.log('ok')" 2>/dev/null | grep -q "ok"; then
     echo "✓ MCP server container is functional"
 else
     echo "✗ MCP server container has issues"

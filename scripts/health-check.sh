@@ -1,7 +1,12 @@
 #!/bin/bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=scripts/detect-runtime.sh
+source "$SCRIPT_DIR/detect-runtime.sh"
+
 echo "=========================================="
-echo "Health Check - LLM Container Stack"
+echo "Health Check - LLM Container Stack ($RUNTIME_NAME)"
 echo "=========================================="
 echo ""
 
@@ -23,8 +28,8 @@ check_service() {
 check_container() {
     local name=$1
 
-    if podman ps --format "{{.Names}}" | grep -q "^${name}$"; then
-        STATUS=$(podman ps --format "{{.Names}}\t{{.Status}}" | grep "^${name}" | cut -f2)
+    if $CONTAINER_CMD ps --format "{{.Names}}" | grep -q "^${name}$"; then
+        STATUS=$($CONTAINER_CMD ps --format "{{.Names}}\t{{.Status}}" | grep "^${name}" | cut -f2)
         echo "✓ $name: $STATUS"
         return 0
     else
@@ -35,13 +40,22 @@ check_container() {
 
 FAILURES=0
 
-# Check Podman
-echo "Podman Machine:"
-if podman machine list 2>/dev/null | grep -q "Currently running"; then
-    echo "✓ Podman machine is running"
+# Check container runtime
+echo "$RUNTIME_NAME:"
+if [ "$CONTAINER_CMD" = "podman" ]; then
+    if podman machine list 2>/dev/null | grep -q "Currently running"; then
+        echo "✓ Podman machine is running"
+    else
+        echo "✗ Podman machine is not running"
+        FAILURES=$((FAILURES + 1))
+    fi
 else
-    echo "✗ Podman machine is not running"
-    FAILURES=$((FAILURES + 1))
+    if docker info &>/dev/null; then
+        echo "✓ Docker daemon is running"
+    else
+        echo "✗ Docker daemon is not running"
+        FAILURES=$((FAILURES + 1))
+    fi
 fi
 echo ""
 
@@ -77,10 +91,14 @@ echo ""
 
 # Check GPU
 echo "GPU Acceleration:"
-if podman exec ollama ls /dev/dri 2>/dev/null | grep -q "renderD128"; then
-    echo "✓ GPU device available"
+if [ "$RUNTIME_HAS_GPU" = "true" ]; then
+    if $CONTAINER_CMD exec ollama ls /dev/dri 2>/dev/null | grep -q "renderD128"; then
+        echo "✓ GPU device available"
+    else
+        echo "⚠ GPU device not found (using CPU)"
+    fi
 else
-    echo "⚠ GPU device not found (using CPU)"
+    echo "⚠ Not available with Docker on macOS (using CPU)"
 fi
 echo ""
 

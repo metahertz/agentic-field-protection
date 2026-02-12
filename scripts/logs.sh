@@ -1,15 +1,20 @@
 #!/bin/bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=scripts/detect-runtime.sh
+source "$SCRIPT_DIR/detect-runtime.sh"
+
 SERVICE=${1:-all}
 
 if [ "$SERVICE" = "all" ]; then
     echo "Showing logs for all services (Ctrl+C to exit)..."
     echo ""
-    podman-compose logs -f
+    $COMPOSE_CMD -f "$SCRIPT_DIR/../$COMPOSE_FILE" logs -f
 elif [ "$SERVICE" = "ollama" ] || [ "$SERVICE" = "openwebui" ] || [ "$SERVICE" = "mcp" ]; then
     echo "Showing logs for $SERVICE (Ctrl+C to exit)..."
     echo ""
-    podman logs -f "$SERVICE"
+    $CONTAINER_CMD logs -f "$SERVICE"
 else
     echo "Usage: $0 [service]"
     echo ""
