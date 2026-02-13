@@ -285,8 +285,16 @@ if [ -n "$TOKENS_PER_SEC" ]; then
 fi
 
 echo ""
-echo "Expected performance (M2/M3 Mac with $MODEL):"
-echo "  Native Metal: 80-100 tokens/sec"
-echo "  Podman GPU:   50-70 tokens/sec"
-echo "  CPU-only:     10-15 tokens/sec"
+# Show platform-appropriate performance expectations
+BENCH_OS="$(uname -s)"
+if [ "$BENCH_OS" = "Darwin" ]; then
+    echo "Expected performance (M2/M3 Mac with $MODEL):"
+    echo "  Native Metal: 80-100 tokens/sec"
+    echo "  Podman GPU:   50-70 tokens/sec"
+    echo "  CPU-only:     10-15 tokens/sec"
+elif [ "$BENCH_OS" = "Linux" ]; then
+    echo "Expected performance (ARM64 Linux with $MODEL):"
+    echo "  Native Vulkan: 60-100+ tokens/sec (varies by GPU)"
+    echo "  CPU-only:      10-15 tokens/sec"
+fi
 echo ""

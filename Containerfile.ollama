@@ -1,5 +1,11 @@
-# Ollama with GPU acceleration for macOS via Vulkan-to-Metal
-# Requires Podman Machine with libkrun provider and virtio-gpu Venus
+# Ollama with GPU acceleration
+#
+# Platform support:
+#   macOS (Apple Silicon) — Vulkan-to-Metal via virtio-gpu Venus
+#   ARM64 Linux           — Native Vulkan drivers (Freedreno, Panfrost, etc.)
+#
+# The GPU driver is configured at runtime via MESA_LOADER_DRIVER_OVERRIDE
+# environment variable (set in podman-compose.yml, populated by start.sh).
 
 FROM fedora:40
 
@@ -21,9 +27,7 @@ RUN curl -fsSL https://ollama.com/install.sh | sh
 # Create necessary directories
 RUN mkdir -p /root/.ollama
 
-# Set environment variables for Vulkan
-ENV MESA_LOADER_DRIVER_OVERRIDE=venus
-ENV VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+# Ollama listens on all interfaces
 ENV OLLAMA_HOST=0.0.0.0:11434
 
 # Expose Ollama API port

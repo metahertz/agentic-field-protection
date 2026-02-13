@@ -40,14 +40,31 @@ check_container() {
 
 FAILURES=0
 
+# Detect platform
+OS="$(uname -s)"
+case "$OS" in
+    Darwin) PLATFORM="macos" ;;
+    Linux)  PLATFORM="linux" ;;
+    *)      PLATFORM="unknown" ;;
+esac
+
 # Check container runtime
 echo "$RUNTIME_NAME:"
 if [ "$CONTAINER_CMD" = "podman" ]; then
-    if podman machine list 2>/dev/null | grep -q "Currently running"; then
-        echo "✓ Podman machine is running"
-    else
-        echo "✗ Podman machine is not running"
-        FAILURES=$((FAILURES + 1))
+    if [ "$PLATFORM" = "macos" ]; then
+        if podman machine list 2>/dev/null | grep -q "Currently running"; then
+            echo "✓ Podman machine is running"
+        else
+            echo "✗ Podman machine is not running"
+            FAILURES=$((FAILURES + 1))
+        fi
+    elif [ "$PLATFORM" = "linux" ]; then
+        if podman info &> /dev/null; then
+            echo "✓ Podman is available (native Linux)"
+        else
+            echo "✗ Podman is not working"
+            FAILURES=$((FAILURES + 1))
+        fi
     fi
 else
     if docker info &>/dev/null; then
