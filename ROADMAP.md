@@ -17,7 +17,7 @@ Containerized local LLM setup with GPU acceleration and MongoDB MCP integration.
 - [x] Automated health checks in CI
 - [x] Security scan for container images
 - [x] Credential management improvements (secrets, not .env)
-- [ ] Performance regression tests (benchmark baselines)
+- [x] Performance regression tests (benchmark baselines)
 
 ## P2 — Extensions
 
